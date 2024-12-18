@@ -1,18 +1,162 @@
+require('dotenv').config();
+
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { stringToHex, chunkToUtf8String, getRandomIDPro } = require('./utils.js');
-const app = express();
 const { generateCursorChecksum, generateHashed64Hex } = require('./generate.js');
+const app = express();
+
+// 在文件开头附近添加
+const startTime = new Date();
+const version = '1.0.0';
+let totalRequests = 0;
+let activeRequests = 0;
 
 // 中间件配置
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 添加支持的模型列表
+const SUPPORTED_MODELS = [
+  {
+    id: "claude-3-5-sonnet-20241022",
+    created: 1706571819,
+    object: "model",
+    owned_by: "anthropic"
+  },
+  {
+    id: "claude-3-opus",
+    created: 1706571819,
+    object: "model",
+    owned_by: "anthropic"
+  },
+  {
+    id: "claude-3-5-haiku",
+    created: 1706571819,
+    object: "model",
+    owned_by: "anthropic"
+  },
+  {
+    id: "claude-3-5-sonnet",
+    created: 1706571819,
+    object: "model",
+    owned_by: "anthropic"
+  },
+  {
+    id: "cursor-small",
+    created: 1706571819,
+    object: "model",
+    owned_by: "cursor"
+  },
+  {
+    id: "gemini-exp-1206",
+    created: 1706571819,
+    object: "model",
+    owned_by: "google"
+  },
+  {
+    id: "gpt-3.5-turbo",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "gpt-4",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "gpt-4-turbo-2024-04-09",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "gpt-4o",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "gpt-4o-mini",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "o1-mini",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  },
+  {
+    id: "o1-preview",
+    created: 1706571819,
+    object: "model",
+    owned_by: "openai"
+  }
+];
+
+// 修改根路由
+app.get('/', (req, res) => {
+  const uptime = Math.floor((new Date() - startTime) / 1000); // 运行时间(秒)
+  
+  res.json({
+    status: 'healthy',
+    version,
+    uptime,
+    stats: {
+      started: startTime.toISOString(),
+      totalRequests,
+      activeRequests,
+      memory: process.memoryUsage()
+    },
+    models: SUPPORTED_MODELS.map(model => model.id),
+    endpoints: [
+      '/v1/chat/completions',
+      '/v1/models', 
+      '/checksum'
+    ]
+  });
+});
+
+// 添加请求计数中间件
+app.use((req, res, next) => {
+  totalRequests++;
+  activeRequests++;
+  
+  res.on('finish', () => {
+    activeRequests--;
+  });
+  
+  next();
+});
+
+// 添加新的路由处理模型列表请求
+app.get('/v1/models', (req, res) => {
+  res.json({
+    object: "list",
+    data: SUPPORTED_MODELS
+  });
+});
+
 app.get('/checksum', (req, res) => {
   const checksum = generateCursorChecksum(generateHashed64Hex(), generateHashed64Hex());
   res.json({
     checksum
   });
 });
+
+// 添加获取环境变量checksum的接口
+app.get('/env-checksum', (req, res) => {
+  const envChecksum = process.env['X_CURSOR_CHECKSUM'];
+  res.json({
+    status: envChecksum ? 'configured' : 'not_configured',
+    checksum: envChecksum || null
+  });
+});
+
 app.post('/v1/chat/completions', async (req, res) => {
   // o1开头的模型，不支持流式输出
   if (req.body.model.startsWith('o1-') && req.body.stream) {
@@ -46,12 +190,11 @@ app.post('/v1/chat/completions', async (req, res) => {
 
     const hexData = await stringToHex(messages, model);
 
-    // 获取checksum，req header中传递优先，环境变量中的等级第二，最后随机生成
-
     // 生成checksum
-    const checksum = req.headers['x-cursor-checksum']
-                  ?? process.env['x-cursor-checksum']
+    const checksum = req.headers['x-cursor-checksum'] 
+                  ?? process.env['x-cursor-checksum'] 
                   ?? generateCursorChecksum(generateHashed64Hex(), generateHashed64Hex());
+
     const response = await fetch('https://api2.cursor.sh/aiserver.v1.AiService/StreamChat', {
       method: 'POST',
       headers: {

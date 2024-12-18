@@ -44,4 +44,4 @@ function generateCursorChecksum(machineId, macMachineId) {
 module.exports = {
     generateHashed64Hex,
     generateCursorChecksum
-};
+}; 

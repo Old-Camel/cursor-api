@@ -8,7 +8,8 @@
   "url": "https://github.com/zhx47/cursor-api",
   "license": "MIT",
   "dependencies": {
-    "express": "4.21.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "protobufjs": "^7.4.0",
     "uuid": "11.0.3"
   },
