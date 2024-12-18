@@ -1,12 +1,10 @@
 require('dotenv').config();
-
+const fetch = require('node-fetch');
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { stringToHex, chunkToUtf8String, getRandomIDPro } = require('./utils.js');
 const { generateCursorChecksum, generateHashed64Hex } = require('./generate.js');
 const app = express();
-
-// 在文件开头附近添加
 const startTime = new Date();
 const version = '1.0.0';
 let totalRequests = 0;
