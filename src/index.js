@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { stringToHex, chunkToUtf8String, getRandomIDPro } = require('./utils.js');
 const app = express();
+const { generateCursorChecksum, generateHashed64Hex } = require('./generate.js');
 
 // 中间件配置
 app.use(express.json());
@@ -46,7 +47,6 @@ app.post('/v1/chat/completions', async (req, res) => {
     const hexData = await stringToHex(messages, model);
 
     // 获取checksum，req header中传递优先，环境变量中的等级第二，最后随机生成
-    const { generateCursorChecksum, generateHashed64Hex } = require('./generate.js');
 
     // 生成checksum
     const checksum = req.headers['x-cursor-checksum']
