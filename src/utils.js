@@ -39,7 +39,7 @@ async function stringToHex(messages, modelName) {
 async function chunkToUtf8String(chunk) {
   try {
     let hex = Buffer.from(chunk).toString('hex');
-    console.log("debug [42] :", hex)
+    // console.log("debug [42] :", hex)
 
     let offset = 0;
     let results = [];
@@ -55,19 +55,19 @@ async function chunkToUtf8String(chunk) {
       const messageHex = hex.slice(offset, offset + dataLength * 2);
       offset += dataLength * 2;
 
-      console.log("debug [57] :", messageHex)
+      // console.log("debug [57] :", messageHex)
       const messageBuffer = Buffer.from(messageHex, 'hex');
       const message = $root.ResMessage.decode(messageBuffer);
       results.push(message.msg);
     }
 
     if (results.length == 0) {
-      console.log("debug [63] :", chunk)
+      // console.log("debug [63] :", chunk)
       return gunzip(chunk);
     }
     return results.join('');
   } catch (err) {
-    console.log("debug [68] :", chunk)
+    // console.log("debug [68] :", chunk)
     return gunzip(chunk);
   }
 }
